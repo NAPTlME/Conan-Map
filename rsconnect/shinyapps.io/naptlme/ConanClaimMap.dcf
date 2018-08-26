@@ -1,0 +1,10 @@
+name: ConanClaimMap
+title:
+username:
+account: naptlme
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 408634
+bundleId: 1554104
+url: https://naptlme.shinyapps.io/ConanClaimMap/
+when: 1535247456.26027

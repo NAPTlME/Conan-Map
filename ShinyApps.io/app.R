@@ -3,10 +3,10 @@
 # Nathan Pratt
 # 8/23/18
 
-requiredPkgs = c("stringr", "dplyr", "shiny", "ggplot2", "png", "grid", 
-                 "reshape2", "raster", "rgdal", "viridis")
-missingPkgs = requiredPkgs[!(requiredPkgs %in% installed.packages()[,"Package"])]
-if(length(missingPkgs)) install.packages(missingPkgs)
+#requiredPkgs = c("stringr", "dplyr", "shiny", "ggplot2", "png", "grid", 
+#                 "reshape2", "raster", "rgdal", "viridis")
+#missingPkgs = requiredPkgs[!(requiredPkgs %in% installed.packages()[,"Package"])]
+#if(length(missingPkgs)) install.packages(missingPkgs)
 
 #### Load Libraries ####
 library(stringr)
@@ -15,10 +15,10 @@ library(shiny)
 library(ggplot2)
 library(png)
 library(grid)
-library(reshape2)
+#library(reshape2)
 library(raster)
-library(rgdal)
-library(viridis)
+#library(rgdal)
+#library(viridis)
 source("conanFx.r")
 
 #### Read Images ####
@@ -37,26 +37,28 @@ width = 1200
 cmbBoxChoices = paste0(LETTERS[1:20], rep(0:24, each = 20))
 ui = fluidPage(
   fluidRow(
-    column(width = 8, plotOutput("plot1", height = round(width * 0.735, 0), width = width, hover = hoverOpts(id = "plot_hover"))),
+    #column(width = 8, plotOutput("plot1", height = round(width * 0.735, 0), width = width, hover = hoverOpts(id = "plot_hover"))),
+    #column(width = 8, plotOutput("plot1", hover = hoverOpts(id = "plot_hover"))),
     column(width = 2, 
            #wellPanel(
            #  actionButton("close", "Stop Session")
            #),
            wellPanel(
-             selectInput(inputId = "cmbBoxFrom", label = "Select Starting Cell", choices = cmbBoxChoices, multiple = F, selected = cmbBoxChoices[1]),
-             selectInput(inputId = "cmbBoxTo", label = "Select Ending Cell", choices = cmbBoxChoices, multiple = F, selected = cmbBoxChoices[length(cmbBoxChoices)])
+             selectInput(inputId = "cmbBoxFrom", label = "Zoom From: ", choices = cmbBoxChoices, multiple = F, selected = cmbBoxChoices[1]),
+             selectInput(inputId = "cmbBoxTo", label = "Zoom To (Preserves Aspect Ratio) : ", choices = cmbBoxChoices, multiple = F, selected = cmbBoxChoices[length(cmbBoxChoices)])
            ),
            wellPanel(
-             selectInput(inputId = "img", label = "Select Base Image", choices = c("Base", "Darkened", "None"), multiple = F,  selected = "Base"),
+             selectInput(inputId = "img", label = "Select Base Image", choices = c("Base", "Darkened", "None"), multiple = F,  selected = "Darkened"),
              checkboxGroupInput(inputId = "options", label = "Map Options",
                                 choices = c("Show Claims" = "showClaim", "Show Grid" = "showGrid", 
                                             "Show Unclaimed" = "showUnclaimed", "Show POIs" = "showPOI",
-                                            "Show Out of Play Zone" = "showOOP", "Save Image" = "saveImg"),
+                                            "Show Out of Play Zone" = "showOOP"),
                                 selected = c("showClaim", "showGrid"))
            ),
            wellPanel(
              verbatimTextOutput("hover_info")
-           ))
+           )),
+    column(width = 8, plotOutput("plot1", height = round(width * 0.735, 0), width = width, hover = hoverOpts(id = "plot_hover")))
   )
 )
 
@@ -108,22 +110,24 @@ server = function(input, output) {
         yRange = (yMax - yMin + 1)
         optYRange = round((xMax - xMin + 1) / targetXYRatio, 0)
         diffYRange = optYRange - yRange
-        #increase range
-        for (i in 1:diffYRange){
-          if (i %% 2 == 1){
-            yMin = yMin -1
-          } else {
-            yMax = yMax + 1
+        if (diffYRange > 0){
+          #increase range
+          for (i in 1:diffYRange){
+            if (i %% 2 == 1){
+              yMin = yMin -1
+            } else {
+              yMax = yMax + 1
+            }
           }
-        }
-        # shift within boundaries
-        while (yMax > 20){
-          yMax = yMax - 1
-          yMin = yMin - 1
-        }
-        while (yMin < 1){
-          yMax = yMax + 1
-          yMin = yMin + 1
+          # shift within boundaries
+          while (yMax > 20){
+            yMax = yMax - 1
+            yMin = yMin - 1
+          }
+          while (yMin < 1){
+            yMax = yMax + 1
+            yMin = yMin + 1
+          }
         }
       } else if (currentXYRatio < targetXYRatio){
         # y range is under ratio
@@ -131,26 +135,28 @@ server = function(input, output) {
         xRange = (xMax - xMin + 1)
         optXRange = round((yMax - yMin + 1) * targetXYRatio, 0)
         diffXRange = optXRange - xRange
-        # increase range
-        for (i in 1:diffXRange){
-          if (i %% 2 == 1){
+        if (diffXRange > 0){
+          # increase range
+          for (i in 1:diffXRange){
+            if (i %% 2 == 1){
+              xMin = xMin - 1
+            } else {
+              xMax = xMax + 1
+            }
+          }
+          # shift to fit boundaries
+          while(xMax > 24){
+            xMax = xMax - 1
             xMin = xMin - 1
-          } else {
+          }
+          while (xMin < 0){
             xMax = xMax + 1
+            xMin = xMin + 1
           }
         }
-        # shift to fit boundaries
-        while(xMax > 24){
-          xMax = xMax - 1
-          xMin = xMin - 1
-        }
-        while (xMin < 0){
-          xMax = xMax + 1
-          xMin = xMin + 1
-        }
       }
-      widthBase = dim(imgDark)[1]
-      heightBase = dim(imgDark)[2]
+      widthBase = dim(imgToUse)[1]
+      heightBase = dim(imgToUse)[2]
       width = widthBase / 25
       height = heightBase / 20
       tmpYMin = 20 - yMax
@@ -167,6 +173,7 @@ server = function(input, output) {
     if (tmp[[3]] != "None"){
       p = p + annotation_custom(rg, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf)
     }
+    rm(rg)
     if ("showGrid" %in% options){
       p = p + geom_vline(xintercept = seq(from = xMin - 0.5, to = xMax + 0.5, by = 1), color = "white", alpha = 0.6, size = 1) +
         geom_hline(yintercept = seq(from = yMin - 0.5, to = yMax + 0.5, by = 1), color = "white", alpha = 0.6, size = 1)
@@ -260,10 +267,9 @@ server = function(input, output) {
         }
         tmpDf = data.frame(X = xVals, Y = yVals, ID = id)
         p = p + geom_polygon(data = tmpDf, aes(X, Y, group = ID), fill = "gray15", color = "gray70", alpha = 0.6)
+        rm(tmpDf)
       }
     }
-    print(length(as.character(xMin:xMax)) == length(xMin:xMax))
-    print(length(LETTERS[yMin:yMax]) == length(yMin:yMax))
     p = p + theme(
       panel.background = element_rect(fill = NA),
       panel.ontop = F,
@@ -274,10 +280,6 @@ server = function(input, output) {
       scale_y_continuous("Var1", labels = LETTERS[yMin:yMax], breaks = yMin:yMax) +
       lims(colour = uniqueCols) #+ 
     #scale_fill_viridis()
-    if ("saveImg" %in% options){
-      ggsave(file.choose(), p, width = 10, height = 8, dpi = 300, 
-             units = "in", device = "png")
-    }
     p
   })
   output$hover_info = renderPrint({
