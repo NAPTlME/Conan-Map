@@ -34,6 +34,7 @@ rm(tmpList)
 
 #### Set up Shiny UI ####
 width = 1200
+cmbBoxChoices = paste0(LETTERS[1:20], rep(0:24, each = 20))
 ui = fluidPage(
   fluidRow(
     column(width = 8, plotOutput("plot1", height = round(width * 0.735, 0), width = width, hover = hoverOpts(id = "plot_hover"))),
@@ -268,6 +269,11 @@ server = function(input, output) {
   output$hover_info = renderPrint({
     if(!is.null(input$plot_hover)){
       hover = input$plot_hover
+      ar = readRDS(claimMatrixFile)
+      claimDf = GetDfFromArray(ar)
+      claimDf$Var3 = NULL
+      claimDf = claimDf %>% mutate(Coord = paste0(LETTERS[Var1], Var2)) %>% dplyr::select(Coord, Var1:value)
+      claimDf$Var1 = as.numeric(claimDf$Var1)
       y = LETTERS[floor(hover$y + 0.5)]
       x = floor(hover$x + 0.5)
       coord = paste0(y,x)

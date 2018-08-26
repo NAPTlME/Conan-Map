@@ -1,0 +1,10 @@
+name: conan-map
+title:
+username:
+account: naptlme
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 408608
+bundleId: 1554039
+url: https://naptlme.shinyapps.io/conan-map/
+when: 1535242203.74172
