@@ -51,7 +51,7 @@ ui = fluidPage(
              checkboxGroupInput(inputId = "options", label = "Map Options",
                                 choices = c("Show Claims" = "showClaim", "Show Grid" = "showGrid", 
                                             "Show Unclaimed" = "showUnclaimed", "Show POIs" = "showPOI",
-                                            "Show Out of Play Zone" = "showOOP"),
+                                            "Show Out of Play Zone" = "showOOP", "Save Image" = "saveImg"),
                                 selected = c("showClaim", "showGrid"))
            ),
            wellPanel(
@@ -181,8 +181,17 @@ server = function(input, output) {
         yVals = numeric(0)
         owner = character(0)
         id = character(0)
+        xmins = numeric(0)
+        xmaxes = numeric(0)
+        ymins = numeric(0)
+        ymaxes = numeric(0)
         it = 1
         for (i in 1:length(coords)){
+          rectLimits = CreateBasePolygon(coords[i])
+          xmins = c(xmins, rectLimits[1,1])
+          xmaxes = c(xmaxes, rectLimits[3,1])
+          ymins = c(ymins, rectLimits[1,2])
+          ymaxes = c(ymaxes, rectLimits[2,2])
           for(polygon in claimableCoords[[coords[i]]]$Polygons){
             xVals = c(xVals, polygon[,1])
             yVals = c(yVals, polygon[,2])
@@ -194,6 +203,7 @@ server = function(input, output) {
         tmpDf = data.frame(X = xVals, Y = yVals, Owner = owner, ID = id)
         p = p + geom_polygon(data = tmpDf, aes(X, Y, fill = Owner, group = ID), color = "gray70", alpha = 0.03, 
                              show.legend = F)
+        #p = p + annotate("text", x = (xmins+xmaxes) / 2, y = (ymins + ymaxes) / 2, label = gsub(" ", "\n",owners), size = 2.5)
       }
     }
     if ("showUnclaimed" %in% options){
@@ -264,6 +274,10 @@ server = function(input, output) {
       scale_y_continuous("Var1", labels = LETTERS[yMin:yMax], breaks = yMin:yMax) +
       lims(colour = uniqueCols) #+ 
     #scale_fill_viridis()
+    if ("saveImg" %in% options){
+      ggsave(file.choose(), p, width = 10, height = 8, dpi = 300, 
+             units = "in", device = "png")
+    }
     p
   })
   output$hover_info = renderPrint({

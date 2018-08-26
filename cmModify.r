@@ -65,6 +65,7 @@ promptSave = function(ar){
   input = readline("Would you like to save your changes? (y/Y): ")
   if (tolower(input) == "y"){
     saveRDS(ar, claimMatrixFile)
+    print("Save complete.")
   } else {
     print("Discarding changes...")
   }
