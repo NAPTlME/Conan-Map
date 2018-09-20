@@ -48,7 +48,7 @@ mkChanges = function(ar, claimableCoords){
       coords = str_match_all(input, "\\w+")[[1]][,1]
       ar = ConvertArrayValuesToT(ar, coords, "None", claimableCoords, overwrite = T)
     } else if (tolower(input) == "ra"){
-      input = readline(paste0(paste0(dimnames(ar)[[3]][-1], collapse = ", "), "\n", "Enter clan name to remove: "))
+      input = readline(paste0(paste0(dimnames(ar)[[3]][-1], collapse = "\n"), "\n", "Enter clan name to remove: "))
       if (!(input %in% dimnames(ar)[[3]])){
         warning(paste0(input, " not found in array."))
       } else {
@@ -71,5 +71,5 @@ promptSave = function(ar){
   }
 }
 ar = mkChanges(ar, claimableCoords)
-promptSave(ar)
+#promptSave(ar)
 options(warn = 0)

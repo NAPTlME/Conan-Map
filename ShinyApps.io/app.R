@@ -17,6 +17,7 @@ library(png)
 library(grid)
 #library(reshape2)
 library(raster)
+library(tidyr)
 #library(rgdal)
 #library(viridis)
 source("conanFx.r")
@@ -30,6 +31,7 @@ tmpList = readRDS("MetaData/cmMapCoordsFinal.rds")
 claimableCoords = tmpList$Claimable
 outOfPlayCoords = tmpList$OutofPlay
 poiCoords = tmpList$POI
+claimTableFile = "MetaData/ClaimTable.csv"
 rm(tmpList)
 
 #### Set up Shiny UI ####
@@ -76,13 +78,24 @@ server = function(input, output) {
       imgToUse = readPNG(imgDark)
     }
     # Set up df with tooltip info
-    ar = readRDS(claimMatrixFile)
-    gridX = as.numeric(colnames(ar))
-    gridY = 1:nrow(ar)
-    claimDf = GetDfFromArray(ar)
-    claimDf$Var3 = NULL
-    claimDf = claimDf %>% mutate(Coord = paste0(LETTERS[Var1], Var2)) %>% dplyr::select(Coord, Var1:value)
+    #ar = readRDS(claimMatrixFile)
+    #claimDf = GetDfFromArray(ar)
+    #claimDf$Var3 = NULL
+    #claimDf = claimDf %>% mutate(Coord = paste0(LETTERS[Var1], Var2)) %>% dplyr::select(Coord, Var1:value)
+    #claimDf$Var1 = as.numeric(claimDf$Var1)
+    claimDf = read.csv(claimTableFile)
+    claimDf = data.frame(lapply(claimDf, as.character), stringsAsFactors = F)
+    claimDf[claimDf == ""] = "None"
+    claimDf$Var1 = factor(claimDf$Var1)
+    colnames(claimDf)[2:ncol(claimDf)] = gsub("\\D+", "", colnames(claimDf[2:ncol(claimDf)]))
+    claimDf = claimDf %>% gather(key = Var2, value = value, as.character(0:24))
+    claimDf$Coord = paste0(claimDf$Var1, claimDf$Var2)
     claimDf$Var1 = as.numeric(claimDf$Var1)
+    claimDf$Var2 = as.numeric(claimDf$Var2)
+    claimDf$value = factor(claimDf$value)
+    claimDf = claimDf[c(4,1:3)]
+    gridX = unique(claimDf$Var2)
+    gridY = 1:length(unique(claimDf$Var1))
     # get inputs
     fromInput = tmp[[1]]
     toInput = tmp[[2]]
@@ -180,25 +193,26 @@ server = function(input, output) {
     }
     if ("showClaim" %in% options){
       tmpDf = claimDf %>% filter(value != "None")
+      print(str(tmpDf))
       if (nrow(tmpDf) > 0){
         coords = tmpDf$Coord
-        owners = tmpDf$value
+        owners = as.character(tmpDf$value)
         uniqueCols = c(uniqueCols, unique(owners))
         xVals = numeric(0)
         yVals = numeric(0)
         owner = character(0)
         id = character(0)
-        xmins = numeric(0)
-        xmaxes = numeric(0)
-        ymins = numeric(0)
-        ymaxes = numeric(0)
+        #xmins = numeric(0)
+        #xmaxes = numeric(0)
+        #ymins = numeric(0)
+        #ymaxes = numeric(0)
         it = 1
         for (i in 1:length(coords)){
-          rectLimits = CreateBasePolygon(coords[i])
-          xmins = c(xmins, rectLimits[1,1])
-          xmaxes = c(xmaxes, rectLimits[3,1])
-          ymins = c(ymins, rectLimits[1,2])
-          ymaxes = c(ymaxes, rectLimits[2,2])
+          #rectLimits = CreateBasePolygon(coords[i])
+          #xmins = c(xmins, rectLimits[1,1])
+          #xmaxes = c(xmaxes, rectLimits[3,1])
+          #ymins = c(ymins, rectLimits[1,2])
+          #ymaxes = c(ymaxes, rectLimits[2,2])
           for(polygon in claimableCoords[[coords[i]]]$Polygons){
             xVals = c(xVals, polygon[,1])
             yVals = c(yVals, polygon[,2])
@@ -208,7 +222,8 @@ server = function(input, output) {
           }
         }
         tmpDf = data.frame(X = xVals, Y = yVals, Owner = owner, ID = id)
-        p = p + geom_polygon(data = tmpDf, aes(X, Y, fill = Owner, group = ID), color = "gray70", alpha = 0.03, 
+        str(tmpDf)
+        p = p + geom_polygon(data = tmpDf, aes(X, Y, fill = Owner, group = ID), color = "gray70", alpha = 0.6, 
                              show.legend = F)
         #p = p + annotate("text", x = (xmins+xmaxes) / 2, y = (ymins + ymaxes) / 2, label = gsub(" ", "\n",owners), size = 2.5)
       }
@@ -230,7 +245,7 @@ server = function(input, output) {
           }
         }
         tmpDf = data.frame(X = xVals, Y = yVals, ID = id)
-        p = p + geom_polygon(data = tmpDf, aes(X, Y, group = ID), fill = "lightcyan2", color = "gray70", alpha = 0.03)
+        p = p + geom_polygon(data = tmpDf, aes(X, Y, group = ID), fill = "lightcyan2", color = "gray70", alpha = 0.6)
       }
     }
     if ("showPOI" %in% options){
@@ -285,11 +300,21 @@ server = function(input, output) {
   output$hover_info = renderPrint({
     if(!is.null(input$plot_hover)){
       hover = input$plot_hover
-      ar = readRDS(claimMatrixFile)
-      claimDf = GetDfFromArray(ar)
-      claimDf$Var3 = NULL
-      claimDf = claimDf %>% mutate(Coord = paste0(LETTERS[Var1], Var2)) %>% dplyr::select(Coord, Var1:value)
+      #ar = readRDS(claimMatrixFile)
+      #claimDf = GetDfFromArray(ar)
+      #claimDf$Var3 = NULL
+      #claimDf = claimDf %>% mutate(Coord = paste0(LETTERS[Var1], Var2)) %>% dplyr::select(Coord, Var1:value)
+      #claimDf$Var1 = as.numeric(claimDf$Var1)
+      claimDf = read.csv(claimTableFile)
+      claimDf = data.frame(lapply(claimDf, as.character), stringsAsFactors = F)
+      claimDf[claimDf == ""] = "None"
+      claimDf$Var1 = factor(claimDf$Var1)
+      colnames(claimDf)[2:ncol(claimDf)] = gsub("\\D+", "", colnames(claimDf[2:ncol(claimDf)]))
+      claimDf = claimDf %>% gather(key = Var2, value = value, as.character(0:24))
+      claimDf$Coord = paste0(claimDf$Var1, claimDf$Var2)
       claimDf$Var1 = as.numeric(claimDf$Var1)
+      claimDf$Var2 = as.numeric(claimDf$Var2)
+      claimDf = claimDf[c(4,1:3)]
       y = LETTERS[floor(hover$y + 0.5)]
       x = floor(hover$x + 0.5)
       coord = paste0(y,x)

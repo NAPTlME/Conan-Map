@@ -10,7 +10,7 @@ library(reshape2)
 library(grid)
 library(raster)
 # Set variable for array file
-claimMatrixFile = "MetaData/mapMatrixBaseInfo.rds"
+claimMatrixFile = "ShinyApps.io/MetaData/mapMatrixBaseInfo.rds"
 # Creates empty matrix to dimensions of map
 CreateEmptyMapMatrix = function(rowNames,colNames){
   m = matrix(rep(0, times = length(rowNames) * length(colNames)), nrow = length(rowNames), ncol = length(colNames))
